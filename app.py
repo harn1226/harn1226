@@ -1,69 +1,33 @@
-#데모 어플리케이션
-import streamlit as st
 import pandas as pd
+import streamlit as st
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Cache our data
-@st.cache_data()
-def load_df():
-    df = pd.read_csv("titanic.csv")
+# Titanic �����ͼ��� �ҷ����� (����: CSV ���� ���·� ����Ǿ� �ִٰ� ����)
+# ���� ��θ� ���� ������ ���� ��η� �ٲ��ּ���.
+titanic_data = pd.read_csv('./data/titanic.csv')
 
-    #생존 여부
-    survival_options = df.Survived.unique()
-    #객실
-    p_class_options = df.Pclass.unique()
-    #성별
-    sex_options = df.Sex.unique()
-    #출발
-    embark_options = df.Embarked.unique()
+# ���̰� ����ġ�� �� ����
+titanic_data = titanic_data.dropna(subset=['Age'])
 
-    #요금
-    min_fare = df.Fare.min()
-    max_fare = df.Fare.max()
+# Pclass���� �׷�ȭ�ϰ� ������ �� ���
+survival_by_pclass_age = titanic_data.groupby(['Pclass', pd.cut(titanic_data['Age'], bins=range(0, 81, 10))])['Survived'].mean().unstack()
 
-    #나이
-    min_age = df.Age.min()
-    max_age = df.Age.max()
+# Streamlit ���ø����̼� ����
+st.title('Survival Rate by Age and Pclass')
 
-    return df, survival_options, p_class_options, sex_options, embark_options, min_fare, max_fare, min_age, max_age
+# Matplotlib �׷����� Streamlit�� ����
+fig, ax = plt.subplots(figsize=(10, 6))
+sns.heatmap(survival_by_pclass_age, annot=True, fmt=".2%", cmap='Blues', cbar_kws={'label': 'Survival Rate'})
+plt.title('Survival Rate by Age and Pclass')
+plt.xlabel('Age Group')
+plt.ylabel('Pclass')
+plt.xticks(rotation=45)  # X�� �� ����̱�
+st.pyplot(fig)
 
-    def check_rows(column, options):
-        return res.loc[res[column].isin(options)]
+# Streamlit ���ø����̼� ����
+if __name__ == '__main__':
+    st.write("To view this Streamlit app, run the following command in your terminal:")
+    st.code("streamlit run app.py")
 
-st.title("Demo DataFrame Query App")
 
-df, survival_options, p_class_options, sex_options, embark_options, min_fare, max_fare, min_age, max_age = load_df()
-res = df
-
-name_query = st.text_input("String match for Name")
-
-cols = st.columns(4)
-survival = cols[0].multiselect("Survived", survival_options)
-p_class = cols[1].multiselect("Passenger Class", p_class_options)
-sex = cols[2].multiselect("Sex", sex_options)
-embark = cols[3].multiselect("Embarked", embark_options)
-
-range_cols = st.columns(3)
-min_fare_range, max_fare_range = range_cols[0].slider("Lowest Fare", float(min_fare), float(max_fare),
-                                        [float(min_fare), float(max_fare)])
-min_age_range, max_age_range = range_cols[2].slider("Lowest Age", float(min_age), float(max_age),
-                                        [float(min_age), float(max_age)])
-
-if name_query != "":
-    res = res.loc[res.Name.str.contains(name_query)]
-
-if survival:
-    res = check_rows("Survived", survival)
-if p_class:
-    res = check_rows("Pclass", p_class)
-if sex:
-    res = check_rows("Sex", sex)
-if embark:
-    res = check_rows("Embarked", embark)
-if range_cols[0].checkbox("Use Fare Range"):
-    res = res.loc[(res.Fare > min_fare_range) & (res.Fare < max_fare_range)]
-if range_cols[2].checkbox("Use Age Range"):
-    res = res.loc[(res.Age > min_age_range) & (res.Age < max_age_range)]
-removal_columns = st.multiselect("Select Columns to Remove", df.columns. tolist())
-for column in removal_columns:
-    res = res.drop(column, axis=1)
-st.write(res)
